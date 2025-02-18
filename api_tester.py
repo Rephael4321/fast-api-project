@@ -1,21 +1,25 @@
 import asyncio
 import httpx
+from http import HTTPMethod
 from Config import API_PORT
-from HttpMethods import HttpMethods
 
 URL = f"http://127.0.0.1:{API_PORT}"
 
 async def request(client: httpx.AsyncClient, url: str, http_method: str, payload: dict = None) -> dict[str, str, dict]:
-    if http_method == HttpMethods.GET.name:
+    if http_method == HTTPMethod.GET:
         response = await client.get(url)
-    elif http_method == HttpMethods.POST.name:
+    elif http_method == HTTPMethod.POST:
         response = await client.post(url, json=payload)
-    elif http_method == HttpMethods.PUT.name:
+    elif http_method == HTTPMethod.PUT:
         response = await client.put(url, json=payload)
-    elif http_method == HttpMethods.DELETE.name:
+    elif http_method == HTTPMethod.DELETE:
         response = await client.delete(url)
     
-    response = response.json()
+    try:
+        response = response.json()
+    except:
+        print(response)
+        response = {}
 
     return {"http_method": http_method, "url": url, "response": response}
 
@@ -52,17 +56,16 @@ async def main():
             "email": ".com"
         }
 
-        # task1 = asyncio.create_task(requestAndPrint(client, f"{URL}/test_async", "GET"))
-        # task2 = asyncio.create_task(requestAndPrint(client, f"{URL}/students", "GET"))
-        task3 = asyncio.create_task(requestAndPrint(client, f"{URL}/students/15", "GET"))
-        # task4 = asyncio.create_task(requestAndPrint(client, f"{URL}/students", "POST", payload))
-        # task5 = asyncio.create_task(requestAndPrint(client, f"{URL}/students/65", "PUT", payload))
-        # task6 = asyncio.create_task(requestAndPrint(client, f"{URL}/students/65", "DELETE"))
-        # await task1
-        # await task2
-        await task3
-        # await task4
-        # await task5
-        # await task6
+        tasks = [
+            asyncio.create_task(requestAndPrint(client, f"{URL}/test_async", "GET")),
+            asyncio.create_task(requestAndPrint(client, f"{URL}/students", "GET")),
+            asyncio.create_task(requestAndPrint(client, f"{URL}/students/15", "GET")),
+            asyncio.create_task(requestAndPrint(client, f"{URL}/students", "POST", payload)),
+            asyncio.create_task(requestAndPrint(client, f"{URL}/students/93", "PUT", payload)),
+            asyncio.create_task(requestAndPrint(client, f"{URL}/students/90", "DELETE"))
+        ]
+
+        for task in tasks:
+            await task
 
 asyncio.run(main())

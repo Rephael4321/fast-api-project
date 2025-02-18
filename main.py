@@ -2,9 +2,7 @@ import asyncio
 import uvicorn
 from fastapi import FastAPI, HTTPException, Path
 from StudentManager import StudentManager
-from models.Student import Student
-from models.StudentInput import StudentInput
-from models.FullStudent import FullStudent
+from models.PydanticModels import StudentIn, StudentOut, StudentDB
 from Config import API_PORT
 
 manager = StudentManager()
@@ -22,7 +20,7 @@ async def asyncEndpoint():
     return {"message": "Response after 5 seconds"}
 
 @app.get(path="/students")
-def getStudents() -> list[FullStudent]:
+def getStudents() -> list[StudentDB]:
     """Retrieve all students."""
     students = manager.getAllStudents()
     return students
@@ -38,7 +36,7 @@ def getStudentById(
         title="Student ID",
         description="Unique integer that specifies a student.",
         ge=0
-    )) -> FullStudent:
+    )) -> StudentDB:
     """Retrieve student by its ID"""
     try:
         student = manager.getStudentById(student_id)
@@ -50,7 +48,7 @@ def getStudentById(
     return student
 
 @app.post("/students")
-def addStudent(new_student: StudentInput) -> Student:
+def addStudent(new_student: StudentIn) -> StudentOut:
     """Add a new student"""
     student = manager.addStudent(new_student)
     return student
@@ -63,13 +61,13 @@ def addStudent(new_student: StudentInput) -> Student:
             }
         )
 def updateStudent(
-    updated_student: StudentInput,
+    updated_student: StudentIn,
     student_id: int = Path(
         title="Student ID",
         description="Unique integer that specifies a student.",
         ge=0
     )
-    ) -> Student:
+    ) -> StudentOut:
     """Update a student by ID"""
     try:
         student = manager.updateStudent(student_id, updated_student)
@@ -95,7 +93,7 @@ def deleteStudent(student_id: int = Path(
         title="Student ID",
         description="Unique integer that specifies a student.",
         ge=0
-    )) -> Student:
+    )) -> StudentOut:
     """Delete a student by ID"""
     try:
         student = manager.deleteStudent(student_id)
@@ -106,4 +104,4 @@ def deleteStudent(student_id: int = Path(
     return student
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=API_PORT)
+    uvicorn.run("main:app", host="0.0.0.0", port=API_PORT, reload=True)

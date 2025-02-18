@@ -1,4 +1,5 @@
-API_PORT = 8000
+API_PORT = 8007
+POSTFIX = "of student"
 DB_USERNAME = "myuser"
 DB_PASSWORD = "mypassword"
 DB_HOSTNAME = "localhost"
