@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from Config import POSTFIX
+from app.Config import POSTFIX
 
 class StudentIn(BaseModel):
     name: str | None = Field(description=f"Name {POSTFIX}")

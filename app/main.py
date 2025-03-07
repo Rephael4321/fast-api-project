@@ -1,3 +1,4 @@
+import set_configs
 import uvicorn
 from fastapi import FastAPI, Depends
 from controller import router

@@ -4,14 +4,9 @@ POSTFIX = "of student"
 DB_USERNAME = "myuser"
 DB_PASSWORD = "mypassword"
 DB_HOSTNAME = "localhost"
-DB_NAME = "college"
-TEST_DB_NAME = "unitest"
+DB_NAME = os.getenv("DB_TEST", "college")
 DB_PORT = "5432"
-
-IS_TESTING = os.getenv("TESTING", "false").lower() == "true"
-DATABASE_URI = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOSTNAME}:{DB_PORT}/{DB_NAME}"
-TEST_DATABASE_URI = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOSTNAME}:{DB_PORT}/{TEST_DB_NAME}"
-DB_URL = TEST_DATABASE_URI if IS_TESTING else DATABASE_URI
+DB_URL = f"postgresql+asyncpg://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOSTNAME}:{DB_PORT}/{DB_NAME}"
 
 DB_STUDENTS_TABLE_NAME = "Students"
 DB_COURSES_TABLE_NAME = "Courses"
@@ -26,4 +21,4 @@ DB_ENROLLMENTS_TABLE_COL_NAME_COURSE_ID = f"{DB_ENROLLMENTS_TABLE_NAME}.course_i
 DB_ENROLLMENTS_TABLE_COL_NAME_STUDENT_ID = f"{DB_ENROLLMENTS_TABLE_NAME}.student_id"
 
 if __name__ == "__main__":
-    print(TEST_DATABASE_URI)
+    print(DB_URL)

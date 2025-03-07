@@ -1,28 +1,23 @@
+import set_configs
 import pytest
-import os
-os.environ["TESTING"] = "true"
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from fastapi.testclient import TestClient
-from main import app
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from httpx import AsyncClient, ASGITransport
+from app.main import app
 from datetime import date
-from models.ORMModels import Base, Student, Course, Enrollment
-from time import time
-from Config import DB_URL
+from app.models.ORMModels import Base, Student, Course, Enrollment
+from app.Config import DB_URL
 
-engine = create_engine(DB_URL)
-
-client = TestClient(app)
+engine = create_async_engine(DB_URL)
 
 @pytest.fixture(scope="session", autouse=True)
-def mock_db():
-    Base.metadata.drop_all(bind=engine)
+async def mock_db():
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.drop_all)
+        await connection.run_sync(Base.metadata.create_all)
 
-    Base.metadata.create_all(bind=engine)
+    testing_session_local = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
-    TestingSessionLocal = sessionmaker(bind=engine)
-
-    with TestingSessionLocal() as session:
+    async with testing_session_local() as session:
         students = [
             Student(name="Alice", age=20, email="alice@example.com"),
             Student(name="Bob", age=22, email="bob@example.com"),
@@ -37,22 +32,16 @@ def mock_db():
         ]
 
         session.add_all(students + courses + enrollments)
-        session.commit()
+        await session.commit()
 
-def test_get_async_test():
-    start_time = time()
-    response = client.get("/async_test")
-    end_time = time()
-    
-    total_time = end_time - start_time
-    assert response.status_code == 200
-    json_response = response.json()
+@pytest.fixture
+async def async_client():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
 
-    assert json_response == {'message': 'Response after 5 seconds',}
-    assert total_time > 5
-
-def test_get_students():
-    response = client.get("/students")
+@pytest.mark.asyncio
+async def test_get_students(async_client):
+    response = await async_client.get("/students")
     assert response.status_code == 200
     json_response = response.json()
 
@@ -68,8 +57,9 @@ def test_get_students():
     assert json_response[1]["age"] == 22
     assert json_response[1]["email"] == "bob@example.com"
 
-def test_get_student_by_id():
-    response = client.get("/students/1")
+@pytest.mark.asyncio
+async def test_get_student_by_id(async_client):
+    response = await async_client.get("/students/1")
     assert response.status_code == 200
     json_response = response.json()
 
@@ -78,20 +68,22 @@ def test_get_student_by_id():
     assert json_response["age"] == 20
     assert json_response["email"] == "alice@example.com"
 
-def test_get_student_by_id_not_found():
-    response = client.get("/students/999")
+@pytest.mark.asyncio
+async def test_get_student_by_id_not_found(async_client):
+    response = await async_client.get("/students/999")
     assert response.status_code == 404
     json_response = response.json()
 
     assert json_response == {'detail': 'Student with id student_id=999 not found.',}
 
-def test_post_student():
+@pytest.mark.asyncio
+async def test_post_student(async_client):
     payload = {
         "name": "Rephael",
         "age": 28,
         "email": "rephael@gmail.com"
     }
-    response = client.post("/students", json=payload)
+    response = await async_client.post("/students", json=payload)
 
     assert response.status_code == 200
     json_response = response.json()
@@ -101,13 +93,14 @@ def test_post_student():
     assert json_response["age"] == 28
     assert json_response["email"] == "rephael@gmail.com"
 
-def test_update_student():
+@pytest.mark.asyncio
+async def test_update_student(async_client):
     payload = {
         "name": "John",
         "age": 28,
         "email": "john@gmail.com"
     }
-    response = client.put("/students/1", json=payload)
+    response = await async_client.put("/students/1", json=payload)
 
     assert response.status_code == 200
     json_response = response.json()
@@ -117,34 +110,37 @@ def test_update_student():
     assert json_response["age"] == 28
     assert json_response["email"] == "john@gmail.com"
 
-def test_update_student_not_found():
+@pytest.mark.asyncio
+async def test_update_student_not_found(async_client):
     payload = {
         "name": "John",
         "age": 28,
         "email": "john@gmail.com"
     }
-    response = client.put("/students/999", json=payload)
+    response = await async_client.put("/students/999", json=payload)
 
     assert response.status_code == 404
     json_response = response.json()
 
     assert json_response == {'detail': 'Student with id student_id=999 not found.'}
 
-def test_update_student_no_data():
+@pytest.mark.asyncio
+async def test_update_student_no_data(async_client):
     payload = {
         "name": None,
         "age": None,
         "email": None
     }
-    response = client.put("/students/999", json=payload)
+    response = await async_client.put("/students/999", json=payload)
 
     assert response.status_code == 400
     json_response = response.json()
 
     assert json_response == {'detail': 'No parameters provided for update.'}
 
-def test_delete_student():
-    response = client.delete("/students/2")
+@pytest.mark.asyncio
+async def test_delete_student(async_client):
+    response = await async_client.delete("/students/2")
 
     assert response.status_code == 200
     json_response = response.json()
@@ -154,8 +150,9 @@ def test_delete_student():
     assert json_response["age"] == 22
     assert json_response["email"] == "bob@example.com"
 
-def test_delete_student_not_found():
-    response = client.delete("/students/999")
+@pytest.mark.asyncio
+async def test_delete_student_not_found(async_client):
+    response = await async_client.delete("/students/999")
 
     assert response.status_code == 404
     json_response = response.json()

@@ -1,20 +1,14 @@
-import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Path
 from StudentManager import StudentManager
 from models.PydanticModels import StudentIn, StudentOut, StudentDB
 
 router = APIRouter()
 
-@router.get(path="/async_test")
-async def asyncEndpoint():
-    """Sleepy endpoint."""
-    await asyncio.sleep(5)
-    return {"message": "Response after 5 seconds"}
-
 @router.get(path="/students")
-def getStudents(manager: StudentManager = Depends()) -> list[StudentDB]:
+async def getStudents(manager: StudentManager = Depends()) -> list[StudentDB]:
     """Retrieve all students."""
-    students = manager.getAllStudents()
+    
+    students = await manager.getAllStudents()
     return students
 
 @router.get(
@@ -23,7 +17,7 @@ def getStudents(manager: StudentManager = Depends()) -> list[StudentDB]:
             404: {"description": "Student not found."}
             }
         )
-def getStudentById(
+async def getStudentById(
     student_id: int = Path(
         title="Student ID",
         description="Unique integer that specifies a student.",
@@ -31,8 +25,9 @@ def getStudentById(
     ),
     manager: StudentManager = Depends()) -> StudentDB:
     """Retrieve student by its ID"""
+    
     try:
-        student = manager.getStudentById(student_id)
+        student = await manager.getStudentById(student_id)
     except KeyError:
         raise HTTPException(
             status_code=404,
@@ -41,11 +36,12 @@ def getStudentById(
     return student
 
 @router.post("/students")
-def addStudent(
+async def addStudent(
     new_student: StudentIn,
     manager: StudentManager = Depends()) -> StudentOut:
     """Add a new student"""
-    student = manager.addStudent(new_student)
+    
+    student = await manager.addStudent(new_student)
     return student
 
 @router.put(
@@ -55,7 +51,7 @@ def addStudent(
             400: {"description": "No arguments specified"}
             }
         )
-def updateStudent(
+async def updateStudent(
     updated_student: StudentIn,
     student_id: int = Path(
         title="Student ID",
@@ -64,8 +60,9 @@ def updateStudent(
     ),
     manager: StudentManager = Depends()) -> StudentOut:
     """Update a student by ID"""
+    
     try:
-        student = manager.updateStudent(student_id, updated_student)
+        student = await manager.updateStudent(student_id, updated_student)
     except KeyError:
         raise HTTPException(
             status_code=404,
@@ -84,15 +81,16 @@ def updateStudent(
             404: {"description": "Student not found."}
             }
         )
-def deleteStudent(student_id: int = Path(
+async def deleteStudent(student_id: int = Path(
         title="Student ID",
         description="Unique integer that specifies a student.",
         ge=0
     ),
     manager: StudentManager = Depends()) -> StudentOut:
     """Delete a student by ID"""
+    
     try:
-        student = manager.deleteStudent(student_id)
+        student = await manager.deleteStudent(student_id)
     except KeyError:
         raise HTTPException(
             status_code=404, detail=f"Student with {student_id=} does not exist."
